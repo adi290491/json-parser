@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"json-parser/lexer"
 	"json-parser/parser"
@@ -12,13 +13,39 @@ func main() {
 	fmt.Println("-----JSON PARSER-----")
 
 	inputStr := `{
-		"name": "Alice",
-		"age": 30,
-		"isStudent": false,
-		"grades": [95.5, 87, 92],
-		"address": {"city": "NYC", "zip": "10001"},
-		"spouse": null
-	}`
+  "id": 123,
+  "name": "John Doe",
+  "isActive": true,
+  "contact": {
+    "email": "john.doe@example.com",
+    "phone": "+1234567890"
+  },
+  "address": {
+    "street": "123 Elm St",
+    "city": "Metropolis",
+    "zipcode": "54321",
+    "coordinates": {
+      "latitude": 40.7128,
+      "longitude": -74.0060
+    }
+  },
+  "skills": ["Go", "Python", "JavaScript"],
+  "projects": [
+    {
+      "title": "Project A",
+      "status": "completed",
+      "technologies": ["Go", "Docker", "Kubernetes"]
+    },
+    {
+      "title": "Project B",
+      "status": "in progress",
+      "technologies": ["Python", "Flask", "PostgreSQL"]
+    }
+  ],
+  "experienceYears": 5,
+  "isAvailableForHire": null
+}
+`
 
 	lexer := lexer.NewLexer(inputStr)
 	lexer.Run()
@@ -26,12 +53,20 @@ func main() {
 	lexerTokens := token.Tokens
 	token.PrintTokens()
 	parser := parser.NewParser(lexerTokens)
-	err := parser.Parse()
+	result, err := parser.Parse()
 
 	if err != nil {
 		log.Fatalf("Parsing error: %v\n", err)
-	} else {
-		log.Println("JSON is Valid!!")
 	}
+	log.Println("JSON is Valid!!")
+
+	formattedoutput, err := json.MarshalIndent(result, "", "\t")
+
+	if err != nil {
+		log.Fatalf("Error formatting output: %v\n", err)
+	}
+
+	fmt.Println("Parsed JSON")
+	fmt.Println(string(formattedoutput))
 
 }

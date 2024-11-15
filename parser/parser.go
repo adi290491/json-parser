@@ -30,18 +30,12 @@ func (p *Parser) next() {
 	}
 }
 
-func (p *Parser) Parse() error {
+func (p *Parser) Parse() (interface{}, error) {
 	log.Println("Parser running...")
-	if len(p.tokens) == 0 {
-		return fmt.Errorf("no tokens to parse")
-	}
 
 	p.currToken = p.tokens[p.position]
 
-	_, err := p.parseValue()
-
-	log.Println("Finished parsing...")
-	return err
+	return p.parseValue()
 }
 
 func (p *Parser) parseValue() (interface{}, error) {
