@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"json-parser/token"
 	"log"
 	"unicode"
@@ -38,7 +39,7 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
-func (l *Lexer) Run() {
+func (l *Lexer) Run() error {
 
 	log.Println("Lexer running...")
 
@@ -66,12 +67,18 @@ func (l *Lexer) Run() {
 			token.Tokens = append(token.Tokens, token.Token{TokenType: token.COMMA, Literal: string(l.currentChar)})
 			l.next()
 		case '"':
-			str := l.lexString()
+			str, err := l.lexString()
+			if err != nil {
+				return err
+			}
 			token.Tokens = append(token.Tokens, token.Token{TokenType: token.STRING, Literal: str})
 		default:
 
 			if unicode.IsNumber(l.currentChar) || l.currentChar == '-' {
-				number := l.lexNumber()
+				number, err := l.lexNumber()
+				if err != nil {
+					return err
+				}
 				token.Tokens = append(token.Tokens, token.Token{TokenType: token.NUMBER, Literal: number})
 			} else if unicode.IsLetter(l.currentChar) {
 				keyword := l.lexKeyword()
@@ -82,20 +89,21 @@ func (l *Lexer) Run() {
 				case "null":
 					token.Tokens = append(token.Tokens, token.Token{TokenType: token.NULL, Literal: keyword})
 				default:
-					log.Fatalf("Unexpected keywork: %s", keyword)
+					return fmt.Errorf("unexpected keyword: %s", keyword)
 				}
 
 			} else {
-				log.Fatalf("Unexpected token: %c\n", l.currentChar)
+				return fmt.Errorf("unexpected token: %c", l.currentChar)
 			}
 		}
 		l.skipWhitespace()
 	}
 
 	log.Println("Lexical analysis completed...")
+	return nil
 }
 
-func (l *Lexer) lexString() string {
+func (l *Lexer) lexString() (string, error) {
 	l.next()
 	start := l.position
 
@@ -104,15 +112,15 @@ func (l *Lexer) lexString() string {
 	}
 
 	if l.currentChar == 0 {
-		log.Fatal("unterminated string")
+		return "", fmt.Errorf("unterminated string at position %d", l.position)
 	}
 
 	str := string(l.input[start:l.position])
 	l.next()
-	return str
+	return str, nil
 }
 
-func (l *Lexer) lexNumber() string {
+func (l *Lexer) lexNumber() (string, error) {
 	start := l.position
 
 	//check for negative
@@ -130,7 +138,7 @@ func (l *Lexer) lexNumber() string {
 		l.next()
 
 		if !unicode.IsDigit(l.currentChar) {
-			log.Fatal("Invalid number format: no digits after decimal point")
+			return "", fmt.Errorf("Invalid number format: no digits after decimal point")
 		}
 
 		for unicode.IsDigit(l.currentChar) {
@@ -149,14 +157,14 @@ func (l *Lexer) lexNumber() string {
 
 		// There must be digits after the exponent
 		if !unicode.IsDigit(l.currentChar) {
-			log.Fatal("Invalid number format: no digits after exponent")
+			return "", fmt.Errorf("Invalid number format: no digits after exponent")
 		}
 		for unicode.IsDigit(l.currentChar) {
 			l.next()
 		}
 	}
 
-	return string(l.input[start:l.position])
+	return string(l.input[start:l.position]), nil
 }
 
 func (l *Lexer) lexKeyword() string {
