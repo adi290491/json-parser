@@ -11,7 +11,14 @@ import (
 func main() {
 	fmt.Println("-----JSON PARSER-----")
 
-	inputStr := `{{}}`
+	inputStr := `{
+		"name": "Alice",
+		"age": 30,
+		"isStudent": false,
+		"grades": [95.5, 87, 92],
+		"address": {"city": "NYC", "zip": "10001"},
+		"spouse": null
+	}`
 
 	lexer := lexer.NewLexer(inputStr)
 	lexer.Run()

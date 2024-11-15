@@ -40,6 +40,7 @@ func (p *Parser) Parse() error {
 
 	_, err := p.parseValue()
 
+	log.Println("Finished parsing...")
 	return err
 }
 
@@ -50,6 +51,14 @@ func (p *Parser) parseValue() (interface{}, error) {
 		return p.parseObject()
 	case token.LEFT_BRACKET:
 		return p.parseArray()
+	case token.STRING:
+		return p.parseString()
+	case token.NUMBER:
+		return p.parseNumber()
+	case token.BOOLEAN:
+		return p.parseBoolean()
+	case token.NULL:
+		return p.parseNull()
 	default:
 		return nil, fmt.Errorf("unexpected token: %v", p.currToken)
 	}
@@ -62,19 +71,32 @@ func (p *Parser) parseObject() (interface{}, error) {
 
 	for p.currToken.TokenType != token.RIGHT_CURLY_BRACKET {
 
-		if p.currToken.TokenType == token.EOF {
-			return nil, fmt.Errorf("unexpected EOF while parsing object")
+		//1 Parse key must be string
+		if p.currToken.TokenType != token.STRING {
+			return nil, fmt.Errorf("expected string, got: %v", p.currToken.Literal)
 		}
+
+		key := p.currToken.Literal
+		p.next()
+		//2. Parse colon
+		if p.currToken.TokenType != token.COLON {
+			return nil, fmt.Errorf("expected colon, got %v", p.currToken.Literal)
+		}
+		p.next()
 
 		value, err := p.parseValue()
 
 		if err != nil {
 			return nil, err
 		}
-
-		jsonObject["value"] = value
-
+		jsonObject[key] = value
 		p.next()
+		//4. Parse comma
+		if p.currToken.TokenType == token.COMMA {
+			p.next()
+		} else if p.currToken.TokenType != token.RIGHT_CURLY_BRACKET {
+			return nil, fmt.Errorf("expected '}' or ',', got: %v", p.currToken)
+		}
 	}
 
 	return jsonObject, nil
@@ -82,15 +104,11 @@ func (p *Parser) parseObject() (interface{}, error) {
 
 func (p *Parser) parseArray() (interface{}, error) {
 
-	JsonArray := []interface{}{}
+	jsonArray := []interface{}{}
 
 	p.next()
 
 	for p.currToken.TokenType != token.RIGHT_BRACKET {
-
-		if p.currToken.TokenType == token.EOF {
-			return nil, fmt.Errorf("unexpected EOF while parsing array")
-		}
 
 		value, err := p.parseValue()
 
@@ -98,10 +116,42 @@ func (p *Parser) parseArray() (interface{}, error) {
 			return nil, err
 		}
 
-		JsonArray = append(JsonArray, value)
+		jsonArray = append(jsonArray, value)
 
 		p.next()
+
+		if p.currToken.TokenType == token.COMMA {
+			p.next()
+		} else if p.currToken.TokenType != token.RIGHT_BRACKET {
+			return nil, fmt.Errorf("expected ']' or ',', got: %v", p.currToken)
+		}
 	}
 
-	return JsonArray, nil
+	return jsonArray, nil
+}
+
+func (p *Parser) parseString() (interface{}, error) {
+	value := p.currToken.Literal
+
+	return value, nil
+}
+
+func (p *Parser) parseNumber() (interface{}, error) {
+	var number float64
+
+	_, err := fmt.Sscanf(p.currToken.Literal, "%f", &number)
+	if err != nil {
+		return nil, fmt.Errorf("invalid number format: %v", p.currToken.Literal)
+	}
+
+	return number, nil
+}
+
+func (p *Parser) parseBoolean() (interface{}, error) {
+	value := p.currToken.Literal == "true"
+	return value, nil
+}
+
+func (p *Parser) parseNull() (interface{}, error) {
+	return nil, nil
 }

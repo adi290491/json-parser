@@ -21,7 +21,7 @@ const (
 	COMMA               tokenType = "comma"
 
 	// number type
-	NUMBER tokenType = "numbre"
+	NUMBER tokenType = "number"
 
 	// string type
 	STRING tokenType = "string"
