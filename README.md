@@ -75,3 +75,10 @@ The server will send a response with an error message depending on the invalidit
   "error": "unexpected character: @ at position 7"
 }
 ```
+
+## PROJECT STRUCTURE
+- lexer.go: Custom lexer to tokenize the input
+- parser.go: Custom parser to parse the token and output appropriate validation status
+- token.go: Defines the tokens to be used by lexer and parser
+- handler.go: Handles incoming request for parsing
+- 
