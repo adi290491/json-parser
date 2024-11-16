@@ -81,4 +81,3 @@ The server will send a response with an error message depending on the invalidit
 - parser.go: Custom parser to parse the token and output appropriate validation status
 - token.go: Defines the tokens to be used by lexer and parser
 - handler.go: Handles incoming request for parsing
-- 
