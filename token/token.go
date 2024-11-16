@@ -35,10 +35,8 @@ const (
 
 type tokenType string
 
-var Tokens = make([]Token, 0)
-
-func PrintTokens() {
-	for _, t := range Tokens {
+func PrintTokens(tokens []Token) {
+	for _, t := range tokens {
 		fmt.Println(t)
 	}
 }

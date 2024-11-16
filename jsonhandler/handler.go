@@ -6,7 +6,6 @@ import (
 	"io"
 	"json-parser/lexer"
 	"json-parser/parser"
-	"json-parser/token"
 	"log"
 	"net/http"
 )
@@ -25,7 +24,7 @@ func ParseJSONHandler(w http.ResponseWriter, r *http.Request) {
 
 	var jsonData string
 	var err error
-	token.Tokens = nil
+
 	r.ParseMultipartForm(10 << 20)
 
 	if err != nil {
@@ -52,7 +51,7 @@ func ParseJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lexer := lexer.NewLexer(jsonData)
-	err = lexer.Run()
+	tokens, err := lexer.Run()
 
 	if err != nil {
 		// Return response if lexer fails
@@ -65,7 +64,7 @@ func ParseJSONHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parser := parser.NewParser(token.Tokens)
+	parser := parser.NewParser(tokens)
 	result, err := parser.Parse()
 	log.Println("Parsing completed...")
 	var response ResponsePayload

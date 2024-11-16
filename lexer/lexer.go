@@ -11,6 +11,7 @@ type Lexer struct {
 	input       []rune
 	position    int
 	currentChar rune
+	Tokens      []token.Token
 }
 
 func NewLexer(inputStr string) *Lexer {
@@ -18,6 +19,7 @@ func NewLexer(inputStr string) *Lexer {
 		input:       []rune(inputStr),
 		position:    0,
 		currentChar: rune(inputStr[0]),
+		Tokens:      []token.Token{},
 	}
 
 	return l
@@ -34,12 +36,16 @@ func (l *Lexer) next() {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for unicode.IsSpace(l.currentChar) {
+	for isWhitespace(l.currentChar) {
 		l.next()
 	}
 }
 
-func (l *Lexer) Run() error {
+func isWhitespace(c rune) bool {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
+}
+
+func (l *Lexer) Run() ([]token.Token, error) {
 
 	log.Println("Lexer running...")
 
@@ -49,65 +55,93 @@ func (l *Lexer) Run() error {
 
 		switch l.currentChar {
 		case '[':
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.LEFT_BRACKET, Literal: string(l.currentChar)})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.LEFT_BRACKET, Literal: string(l.currentChar)})
 			l.next()
 		case ']':
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.RIGHT_BRACKET, Literal: string(l.currentChar)})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.RIGHT_BRACKET, Literal: string(l.currentChar)})
 			l.next()
 		case '{':
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.LEFT_CURLY_BRACKET, Literal: string(l.currentChar)})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.LEFT_CURLY_BRACKET, Literal: string(l.currentChar)})
 			l.next()
 		case '}':
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.RIGHT_CURLY_BRACKET, Literal: string(l.currentChar)})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.RIGHT_CURLY_BRACKET, Literal: string(l.currentChar)})
 			l.next()
 		case ':':
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.COLON, Literal: string(l.currentChar)})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.COLON, Literal: string(l.currentChar)})
 			l.next()
 		case ',':
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.COMMA, Literal: string(l.currentChar)})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.COMMA, Literal: string(l.currentChar)})
 			l.next()
 		case '"':
 			str, err := l.lexString()
 			if err != nil {
-				return err
+				return nil, err
 			}
-			token.Tokens = append(token.Tokens, token.Token{TokenType: token.STRING, Literal: str})
+			l.Tokens = append(l.Tokens, token.Token{TokenType: token.STRING, Literal: str})
 		default:
 
 			if unicode.IsNumber(l.currentChar) || l.currentChar == '-' {
 				number, err := l.lexNumber()
 				if err != nil {
-					return err
+					return nil, err
 				}
-				token.Tokens = append(token.Tokens, token.Token{TokenType: token.NUMBER, Literal: number})
+				l.Tokens = append(l.Tokens, token.Token{TokenType: token.NUMBER, Literal: number})
 			} else if unicode.IsLetter(l.currentChar) {
 				keyword := l.lexKeyword()
 
 				switch keyword {
 				case "true", "false":
-					token.Tokens = append(token.Tokens, token.Token{TokenType: token.BOOLEAN, Literal: keyword})
+					l.Tokens = append(l.Tokens, token.Token{TokenType: token.BOOLEAN, Literal: keyword})
 				case "null":
-					token.Tokens = append(token.Tokens, token.Token{TokenType: token.NULL, Literal: keyword})
+					l.Tokens = append(l.Tokens, token.Token{TokenType: token.NULL, Literal: keyword})
 				default:
-					return fmt.Errorf("unexpected keyword: %s", keyword)
+					return nil, fmt.Errorf("unexpected keyword: %s", keyword)
 				}
 
 			} else {
-				return fmt.Errorf("unexpected token: %c", l.currentChar)
+				return nil, fmt.Errorf("unexpected token: %c", l.currentChar)
 			}
 		}
 		l.skipWhitespace()
 	}
 
 	log.Println("Lexical analysis completed...")
-	return nil
+	return l.Tokens, nil
+}
+
+func isHexDigit(c rune) bool {
+	return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')
 }
 
 func (l *Lexer) lexString() (string, error) {
 	l.next()
-	start := l.position
 
+	var result []rune
 	for l.currentChar != '"' && l.currentChar != 0 {
+
+		if l.currentChar == '\\' {
+			l.next()
+
+			switch l.currentChar {
+			case '"', '\\', '/', 'b', 'f', 'n', 'r', 't':
+				result = append(result, '\\', l.currentChar)
+
+			case 'u':
+				unicode := l.position + 1
+				for i := 0; i < 4; i++ {
+					l.next()
+					if !isHexDigit(l.currentChar) {
+						return "", fmt.Errorf("invalid unicode escape sequence at position %d", l.position)
+					}
+				}
+				result = append(result, l.input[unicode-2:l.position+1]...)
+			default:
+				return "", fmt.Errorf("invalid escape character '\\%c' at position %d", l.currentChar, l.position)
+			}
+
+		} else {
+			result = append(result, l.currentChar)
+		}
 		l.next()
 	}
 
@@ -115,9 +149,8 @@ func (l *Lexer) lexString() (string, error) {
 		return "", fmt.Errorf("unterminated string at position %d", l.position)
 	}
 
-	str := string(l.input[start:l.position])
 	l.next()
-	return str, nil
+	return string(result), nil
 }
 
 func (l *Lexer) lexNumber() (string, error) {
