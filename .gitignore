@@ -1,0 +1,5 @@
+# Ignore the compiled binary files
+main
+*.exe
+*.out
+*.bin
