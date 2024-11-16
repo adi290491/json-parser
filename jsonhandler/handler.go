@@ -25,7 +25,7 @@ func ParseJSONHandler(w http.ResponseWriter, r *http.Request) {
 	var jsonData string
 	var err error
 
-	r.ParseMultipartForm(10 << 20)
+	err = r.ParseMultipartForm(10 << 20)
 
 	if err != nil {
 		http.Error(w, "Unable to parse form data", http.StatusBadRequest)
@@ -51,13 +51,13 @@ func ParseJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lexer := lexer.NewLexer(jsonData)
-	tokens, err := lexer.Run()
+	tokens, lexerr := lexer.Run()
 
-	if err != nil {
+	if lexerr != nil {
 		// Return response if lexer fails
 		response := ResponsePayload{
 			Status: "failure",
-			Error:  fmt.Sprintf("Lexing error: %v", err),
+			Error:  fmt.Sprintf("Lexing error: %v", lexerr),
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
